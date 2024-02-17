@@ -437,6 +437,8 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 1364169759}
   _networkObjectCache: {fileID: 1364169759}
+  playerList: 
+  playerControllers: []
 --- !u!4 &1364169761
 Transform:
   m_ObjectHideFlags: 0

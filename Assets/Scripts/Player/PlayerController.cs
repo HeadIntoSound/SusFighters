@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using FishNet.Connection;
 using FishNet.Object;
+using FishNet.Component.Animating;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -19,6 +20,7 @@ public class PlayerController : NetworkBehaviour
     Vector3 directionToTarget;
     [SerializeField] float knockback = 2;
     [SerializeField] float range = 1.5f;
+    [SerializeField] NetworkAnimator anim;
 
     public override void OnStartClient()
     {
@@ -105,7 +107,7 @@ public class PlayerController : NetworkBehaviour
         if (Input.GetKeyDown(KeyCode.Space) && target != null)
         {
             print("casting");
-
+            anim.Play("Attack");
             RpcCastHitFromServer(transform.position, target.position - transform.position, range, playersLayer.value);
         }
     }

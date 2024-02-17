@@ -181,7 +181,7 @@ GameObject:
   - component: {fileID: 6056150475720631928}
   - component: {fileID: 2109288571445529680}
   m_Layer: 0
-  m_Name: ArmNack
+  m_Name: ArmBack
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -267,6 +267,8 @@ GameObject:
   - component: {fileID: 1751189704501705779}
   - component: {fileID: 676312925020720656}
   - component: {fileID: 2053305153411007780}
+  - component: {fileID: 5129977199167058361}
+  - component: {fileID: 7639620085345175771}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -320,6 +322,7 @@ MonoBehaviour:
   rotation: 1
   knockback: 2
   range: 1.5
+  anim: {fileID: 7639620085345175771}
 --- !u!114 &5781170580790944572
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -407,6 +410,7 @@ MonoBehaviour:
   _networkBehaviours:
   - {fileID: 6190845179455091060}
   - {fileID: 2053305153411007780}
+  - {fileID: 7639620085345175771}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
@@ -468,6 +472,48 @@ MonoBehaviour:
     X: 0
     Y: 0
     Z: 0
+--- !u!95 &5129977199167058361
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4711648575248183229}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 3e777d22cb6600146a315bc545f77c98, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7639620085345175771
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4711648575248183229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8cac635f24954048aad3a6ff9110beb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _componentIndexCache: 2
+  _addedNetworkObject: {fileID: 676312925020720656}
+  _networkObjectCache: {fileID: 676312925020720656}
+  IgnoredParameters: []
+  _animator: {fileID: 5129977199167058361}
+  _smoothFloats: 1
+  _interpolation: 2
+  _clientAuthoritative: 1
+  _sendToOwner: 0
 --- !u!1 &6362408181363824408
 GameObject:
   m_ObjectHideFlags: 0
