@@ -1,15 +1,23 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using FishNet;
 using FishNet.Connection;
 using FishNet.Object;
-using UnityEngine;
 
+// Controls data only available on the server
 public class ServerController : NetworkBehaviour
 {
-    public List<int> playerList = new List<int>();
-    [SerializeField] List<PlayerController> playerControllers = new List<PlayerController>();
+    public static ServerController Instance;                                // Singleton
+    public List<PlayerController> players = new List<PlayerController>();   // A list of all connected players
+    
+    // Creates the singleton instance
+    void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(this.gameObject);
+    }
+
+    // Deletes the object if on the client
     public override void OnStartNetwork()
     {
         base.OnStartNetwork();
@@ -19,49 +27,55 @@ public class ServerController : NetworkBehaviour
         }
     }
 
+    // Avoids having more than 2 connections, initializes each player's data on connection 
     public override void OnSpawnServer(NetworkConnection connection)
     {
         base.OnSpawnServer(connection);
 
-        // Checks if there's more than 2 players, automatically kicks any new connection if true
-        if (playerList.Count >= 2)
+        if (players.Count >= 2)
         {
             connection.Disconnect(true);
             return;
         }
 
-        playerList.Add(connection.ClientId);
-        var player = connection.FirstObject.GetComponent<PlayerController>();
-        playerControllers.Add(player);
-        // Sets player 2 color
-        if (playerList.Count > 1)
+        players.Add(connection.FirstObject.GetComponent<PlayerController>());
+
+        for (int i = 0; i < players.Count; i++)
         {
-            RpcChangeColor(player);
-            for (int i = 0; i < playerControllers.Count; i++)
-            {
-                int nextIndex = i > 0 ? 0 : 1;
-                RpcSetTarget(playerControllers[i], playerControllers[nextIndex].transform);
-            }
+            int nextIndex = i > 0 ? 0 : 1;
+            if (players.Count > 1)
+                RpcSetTarget(players[i], players[nextIndex]);
+            RpcChangeColor(players[i], i);
+            RpcSetUI(players[i], i);
         }
     }
 
     // Tells each client to change the color of the player 2
     [ObserversRpc]
-    private void RpcChangeColor(PlayerController player)
+    private void RpcChangeColor(PlayerController player, int index)
     {
-        player.skinController.SetColor(1);
+        player.skinController.SetColor(index);
     }
 
+    // Sets the target of each player
     [ObserversRpc]
-    void RpcSetTarget(PlayerController player, Transform target)
+    void RpcSetTarget(PlayerController player, PlayerController target)
     {
         player.target = target;
     }
 
+    // Initializes UI
+    [ObserversRpc]
+    void RpcSetUI(PlayerController player, int index)
+    {
+        player.InitializeUI(index);
+    }
+
+    // Removes disconnected players
     public override void OnDespawnServer(NetworkConnection connection)
     {
         base.OnDespawnServer(connection);
-        playerList.Remove(connection.ClientId);
+        players.RemoveAt(connection.ClientId % 2 == 0 ? 0 : 1);
     }
 
 }

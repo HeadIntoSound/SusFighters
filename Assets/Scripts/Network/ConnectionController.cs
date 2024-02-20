@@ -4,7 +4,7 @@ using FishNet.Transporting.Tugboat;
 using FishNet;
 using FishNet.Transporting;
 
-// For testing only, controls the server and client connections
+// For testing only, controls the server and client connections when using ParraSync
 public class ConnectionController : MonoBehaviour
 {
     [SerializeField] Tugboat tugboat;

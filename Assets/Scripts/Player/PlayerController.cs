@@ -1,127 +1,258 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Component.Animating;
+using FishNet.Object.Synchronizing;
+using FishNet.Object.Prediction;
+using FishNet.Transporting;
 
 public class PlayerController : NetworkBehaviour
 {
-    [SerializeField] float moveSpeed;
-    [SerializeField] float jumpSpeed;
-    [SerializeField] Rigidbody rb;
-    bool canMove = true;
-    [SerializeField] int jumpCount = 2;
-    [SerializeField] LayerMask groundLayer;
-    [SerializeField] LayerMask playersLayer;
-    public SkinController skinController;
-    public Transform target;
-    [SerializeField] float rotation = 1;
-    Vector3 directionToTarget;
-    [SerializeField] float knockback = 2;
-    [SerializeField] float range = 1.5f;
-    [SerializeField] NetworkAnimator anim;
+    [SyncVar(OnChange = nameof(OnHealthChange))] public float health;   // Percentage of damage received since the last respawn
+    [SyncVar(OnChange = nameof(OnPointsChange))] public int points;     // Amount of times the player threw the opponent out the stage (or the opponent fell)
 
+    float timeSinceLastAttack;  // Used to check if the player can attack
+    bool jump;                  // Used to trigger the jump
+    bool hitstun;               // Hitstun is a state where the player got hit and can't input any movement, this is used to restrict movement when needed
+    bool ledgeGrab;             // The ledge grab is very primitive, could be expanded, for now this checks if the player is hugging the ledge
+    int playerSlot;             // Used to know if this player is player 1 or player 2
+    [SerializeField] PlayerStats stats; // Holds all the variables used to balance the character
+    [SerializeField] Rigidbody rb;
+    public PlayerController target;     // A reference to the other player
+    [SerializeField] NetworkAnimator anim;
+    public SkinController skinController;
+    [SerializeField] HitboxController hitboxController;
+    [SerializeField] CapsuleCollider col;
+    [SerializeField] LayerMask groundLayer;
+
+    // Events to update the UI
+    void OnHealthChange(float prev, float next, bool asServer)
+    {
+        if (asServer)
+            return;
+        EventManager.Instance.OnHealthChange.Invoke(next, playerSlot);
+    }
+
+    void OnPointsChange(int prev, int next, bool asServer)
+    {
+        if (asServer)
+            return;
+        EventManager.Instance.OnPointsChange.Invoke(next, playerSlot);
+    }
+
+    // Client side prediction set up
+    public override void OnStartNetwork()
+    {
+        base.OnStartNetwork();
+        base.TimeManager.OnTick += TimeManager_OnTick;
+        base.TimeManager.OnPostTick += TimeManager_OnPostTick;
+    }
+
+    public override void OnStopNetwork()
+    {
+        base.OnStopNetwork();
+        base.TimeManager.OnTick -= TimeManager_OnTick;
+        base.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+    }
+
+    // This was taken from the official fish-net documentation
+    MoveData BuildMoveData()
+    {
+        if (!base.IsOwner)
+            return default;
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+        MoveData md = new MoveData(jump, hitstun, horizontal, vertical);
+        jump = false;
+        return md;
+    }
+
+    // The Move function was adapted from the documentation to suit the project's needs
+    [ReplicateV2]
+    void Move(MoveData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
+    {
+        CheckGroundCollision();
+        if (md.hitstun)
+            return;
+        if (md.horizontal != 0 && !ledgeGrab)
+            HorizontalMovement(md.horizontal, stats.acceleration, stats.maxSpeed);
+        if (md.vertical < 0)
+        {
+            rb.AddForce(Physics.gravity * 2);
+            col.center = Vector3.forward;
+        }
+        if (md.jump)
+        {
+            rb.velocity = Vector3.zero;
+            rb.AddForce(Vector3.up * stats.jumpSpeed, ForceMode.Impulse);
+            stats.jumpCount--;
+        }
+
+    }
+
+    void TimeManager_OnTick()
+    {
+        Move(BuildMoveData());
+    }
+
+    void TimeManager_OnPostTick()
+    {
+        if (IsServer)
+        {
+            ReconcileData rd = new ReconcileData(transform.position, transform.rotation, rb.velocity, rb.angularVelocity);
+            Reconciliation(rd);
+        }
+    }
+
+    [ReconcileV2]
+    void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable)
+    {
+        transform.position = rd.Position;
+        transform.rotation = rd.Rotation;
+        if (rb.isKinematic)
+            return;
+        rb.velocity = rd.Velocity;
+        rb.angularVelocity = rd.AngularVelocity;
+    }
+
+    // Used to not run any of this on remote players
     public override void OnStartClient()
     {
         base.OnStartClient();
         if (!base.IsOwner)
         {
-
             this.enabled = false;
         }
     }
 
-    void Start()
-    {
-
-    }
-
-    // Update is called once per frame
     void Update()
     {
-        Movement();
-        CheckGroundCollision();
-        CastHit();
-    }
-
-    void Movement()
-    {
-        if (!canMove)
-            return;
-
         FaceTarget();
-        Vector3 moveDirection = new Vector3(Input.GetAxis("Horizontal") * rotation, 0f, 0f);
-
-        if (Input.GetKeyDown(KeyCode.W) && jumpCount > 0)
-        {
-            rb.velocity = Vector3.zero;
-            rb.AddForce(Vector3.up * jumpSpeed, ForceMode.Impulse);
-            jumpCount--;
-        }
-
-        transform.Translate(moveDirection * moveSpeed * Time.deltaTime);
+        Jump();
+        Attack();
     }
 
+    // This was also taken from the documentation, adapted the jump count to allow double jump
+    void Jump()
+    {
+        if (Input.GetButtonDown("Jump") && stats.jumpCount > 0)
+            jump = true;
+    }
+
+    // Calculates and applies the movement
+    void HorizontalMovement(float input, float acceleration, float maxSpeed)
+    {
+        Vector3 force = Vector3.right * input * acceleration;
+        rb.AddForce(force);
+        if (rb.velocity.magnitude > maxSpeed)
+            rb.velocity = new Vector3(input * maxSpeed, rb.velocity.y, 0f);
+    }
+
+    // Uses a short raycast from the base of the character to know if is grounded
+    // Given the fact that the game does not use the Z axis to move, I use it to drop and jump to the platforms without any inconvenience
+    // If the player is in the air, the collider moves back (respective from the camera, forward globally), when grounded is at the center
     void CheckGroundCollision()
     {
-        if (Physics.Raycast(transform.position, Vector3.down, 1.1f, groundLayer))
+        Vector3 origin = transform.position + Vector3.down * transform.lossyScale.y * 0.9f;
+        if (Physics.Raycast(origin, Vector3.down, .15f, groundLayer))
         {
-            jumpCount = 2;
+            stats.jumpCount = 2;
+            col.center = Vector3.zero;
         }
         else
         {
-            jumpCount = jumpCount > 0 ? 1 : 0;
+            stats.jumpCount = stats.jumpCount == 2 ? 1 : stats.jumpCount;
+            if (!Physics.Raycast(origin, Vector3.down, .15f, groundLayer))
+                col.center = Vector3.forward;
         }
     }
 
+    // Automatically rotates the player to face the target at all times
     void FaceTarget()
     {
         if (target == null)
             return;
-        directionToTarget = (target.position - transform.position).normalized;
-        if (directionToTarget.x > 0)
-        {
+        Vector3 dir = (target.transform.position - transform.position).normalized;
+        if (dir.x > 0)
             transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            rotation = 1;
-        }
 
-        if (directionToTarget.x < 0)
-        {
+        if (dir.x < 0)
             transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-            rotation = -1;
-        }
-
     }
 
-    [ObserversRpc]
-    public void RpcReceiveHit()
+    // Used to set up the UI's values when connection is established
+    public void InitializeUI(int slot)
     {
-        //rb.velocity = Vector3.zero;
-        print("got hit");
-        rb.AddForce((transform.position - target.position) * 2, ForceMode.Impulse);
+        playerSlot = slot;
+        EventManager.Instance.OnHealthChange.Invoke(health, playerSlot);
+        EventManager.Instance.OnPointsChange.Invoke(points, playerSlot);
     }
 
-    void CastHit()
+    // The server calls this function to calculate the knockback and hitstun of the player that got hit
+    [TargetRpc]
+    public void RpcReceiveHit(NetworkConnection conn)
     {
-        if (Input.GetKeyDown(KeyCode.Space) && target != null)
+        hitstun = true;
+        rb.velocity = Vector3.zero;
+        float horizontal = (transform.position - target.transform.position).normalized.x;
+        Vector3 force = new Vector3(horizontal, .75f, 0f) * (stats.knockback + health * Constants.KnockbackModifier);
+        rb.AddForce(force, ForceMode.Impulse);
+        StartCoroutine(HitstunTime());
+    }
+
+    // Calculates the amount of time the player is going to be unable to input movement
+    IEnumerator HitstunTime()
+    {
+        float hitstun = health * 0.05f;
+        yield return new WaitForSeconds(hitstun);
+        this.hitstun = false;
+    }
+
+    // Produces the attack, telling the hitbox to activate and check if triggered
+    void Attack()
+    {
+        timeSinceLastAttack += Time.deltaTime;
+        if (timeSinceLastAttack < stats.attackDuration + stats.attackCooldown)
+            return;
+        if (Input.GetButtonDown("Fire1"))
         {
-            print("casting");
             anim.Play("Attack");
-            RpcCastHitFromServer(transform.position, target.position - transform.position, range, playersLayer.value);
+            hitboxController.Attack(stats.attackDuration, () => { RpcTriggerHit(target); });
+            timeSinceLastAttack = 0;
         }
     }
 
+    // Triggers the attack
     [ServerRpc]
-    void RpcCastHitFromServer(Vector3 from, Vector3 to, float range, int layer)
+    void RpcTriggerHit(PlayerController toHit)
     {
-        print("server processing hit in layer: " + layer.ToString());
-        if (Physics.Raycast(from, to, out RaycastHit hit, range, layer))
+        toHit.health += Constants.DmgModifier;
+        toHit.RpcReceiveHit(toHit.Owner);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        // Checks if the player is hugging the ledge, allows them to jump higher to recover
+        if (other.CompareTag(Tags.LEDGE))
         {
-            if (hit.transform.TryGetComponent(out PlayerController otherPlayer))
-            {
-                otherPlayer.RpcReceiveHit();
-            }
+            ledgeGrab = true;
+            stats.jumpCount = 1;
+            stats.jumpSpeed *= 1.25f;
+        }
+        // Stops the player when respawning
+        if (other.CompareTag(Tags.BLASTZONE))
+            rb.velocity = Vector3.zero;
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        // Resets the jump speed previously raised
+        if (other.transform.CompareTag(Tags.LEDGE))
+        {
+
+            ledgeGrab = false;
+            stats.jumpSpeed /= 1.25f;
         }
     }
 }
