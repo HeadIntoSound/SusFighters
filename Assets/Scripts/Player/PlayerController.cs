@@ -196,7 +196,7 @@ public class PlayerController : NetworkBehaviour
         hitstun = true;
         rb.velocity = Vector3.zero;
         float horizontal = (transform.position - target.transform.position).normalized.x;
-        Vector3 force = new Vector3(horizontal, .75f, 0f) * (stats.knockback + health * Constants.KnockbackModifier);
+        Vector3 force = new Vector3(horizontal, .75f, 0f) * (stats.knockback + health * Constants.KNOCKBACKMODIFIER);
         rb.AddForce(force, ForceMode.Impulse);
         StartCoroutine(HitstunTime());
     }
@@ -204,7 +204,7 @@ public class PlayerController : NetworkBehaviour
     // Calculates the amount of time the player is going to be unable to input movement
     IEnumerator HitstunTime()
     {
-        float hitstun = health * 0.05f;
+        float hitstun = health * Constants.HITSTUNMODIFIER;
         yield return new WaitForSeconds(hitstun);
         this.hitstun = false;
     }
@@ -227,7 +227,7 @@ public class PlayerController : NetworkBehaviour
     [ServerRpc]
     void RpcTriggerHit(PlayerController toHit)
     {
-        toHit.health += Constants.DmgModifier;
+        toHit.health += Constants.DMGMODIFIER;
         toHit.RpcReceiveHit(toHit.Owner);
     }
 
