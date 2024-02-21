@@ -1,12 +1,12 @@
 using System.Collections;
 using UnityEngine;
-using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Component.Animating;
 using FishNet.Object.Synchronizing;
 using FishNet.Object.Prediction;
 using FishNet.Transporting;
 
+// Controls the player and their interactions
 public class PlayerController : NetworkBehaviour
 {
     [SyncVar(OnChange = nameof(OnHealthChange))] public float health;   // Percentage of damage received since the last respawn
@@ -211,11 +211,11 @@ public class PlayerController : NetworkBehaviour
     // Calculates the amount of time the player is going to be unable to input movement
     IEnumerator HitstunTime()
     {
-        skinController.HitstunIndicator(true);
-        float hitstun = health * Constants.HITSTUNMODIFIER;
-        yield return new WaitForSeconds(hitstun);
-        this.hitstun = false;
-        skinController.HitstunIndicator(false);
+        skinController.HitstunIndicator(true, playerSlot);
+        float hitstunTime = health * Constants.HITSTUNMODIFIER;
+        yield return new WaitForSeconds(hitstunTime);
+        hitstun = false;
+        skinController.HitstunIndicator(false, playerSlot);
     }
 
     // Produces the attack, telling the hitbox to activate and check if triggered
@@ -251,9 +251,13 @@ public class PlayerController : NetworkBehaviour
             stats.jumpCount = 1;
             stats.jumpSpeed *= 1.25f;
         }
-        // Stops the player when respawning
+        // Stops the player when respawning and allows them to move again
         if (other.CompareTag(Tags.BLASTZONE))
+        {
             rb.velocity = Vector3.zero;
+            hitstun = false;
+            skinController.HitstunIndicator(false, playerSlot);
+        }
     }
 
     private void OnTriggerExit(Collider other)

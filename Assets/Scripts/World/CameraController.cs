@@ -1,23 +1,24 @@
 using UnityEngine;
 
+//  Controls the camera movement when the player is slightly off the stage
 public class CameraController : MonoBehaviour
 {
-    [SerializeField] Transform target;
-    [SerializeField] float startingDistance = 10f;
-    [SerializeField] float maxDisplacement = 5f;
-    [SerializeField] float speed = 5f;
-    // Start is called before the first frame update
+    [SerializeField] Transform target;                      // A reference to the player
+    [SerializeField] float startingDistance = 11f;          // How much the player has to move from the center to trigger camera's movement
+    [SerializeField] float maxDisplacement = 6.5f;          // How much the camera can be moved
+    [SerializeField] float speed = 1.15f;                   // Camera's movement speed  
+
     void Start()
     {
         EventManager.Instance.OnLocalCameraSetup.AddListener((t) => { target = t; });
     }
 
-    // Update is called once per frame
     void Update()
     {
         FollowPlayer();
     }
 
+    // Only moving in the X-axis is needed, so this moves the camera a little to the right or to the left
     void FollowPlayer()
     {
         if (target == null)

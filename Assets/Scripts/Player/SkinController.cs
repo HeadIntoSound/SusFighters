@@ -12,15 +12,14 @@ public class SkinController : MonoBehaviour
             r.material.color = playerColors[playerIndex];
     }
 
-    public void HitstunIndicator(bool activate)
+    public void HitstunIndicator(bool activate, int playerSlot)
     {
         foreach (var r in renderers)
         {
-            Color baseColor = r.material.color;
             if (activate)
-                r.material.color = baseColor + Color.gray;
+                r.material.color = playerColors[playerSlot] + Color.gray;
             else
-                r.material.color = baseColor - Color.gray;
+                r.material.color = playerColors[playerSlot];
         }
 
     }
