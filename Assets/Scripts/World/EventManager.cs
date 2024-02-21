@@ -6,8 +6,8 @@ public class EventManager : MonoBehaviour
 {
     public static EventManager Instance;
 
-    public class StartGameEvent : UnityEvent { }
-    public StartGameEvent OnStartGame = new StartGameEvent();
+    public class LocalCameraSetup : UnityEvent<Transform> { }
+    public LocalCameraSetup OnLocalCameraSetup = new LocalCameraSetup();
 
     // Used to update UI when a player's health changes its value
     public class HealthChange : UnityEvent<float, int> { }

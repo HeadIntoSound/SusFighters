@@ -116,15 +116,13 @@ public class PlayerController : NetworkBehaviour
         rb.angularVelocity = rd.AngularVelocity;
     }
 
-    // Used to not run any of this on remote players
-    // public override void OnStartClient()
-    // {
-    //     base.OnStartClient();
-    //     if (!base.IsOwner)
-    //     {
-    //         this.enabled = false;
-    //     }
-    // }
+    // 
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
+        if (base.IsOwner)
+            EventManager.Instance.OnLocalCameraSetup.Invoke(transform);
+    }
 
     void Update()
     {
@@ -200,7 +198,7 @@ public class PlayerController : NetworkBehaviour
         anim.Play(AnimationNames.TAKEDMG);
         hitstun = true;
         StartCoroutine(HitstunTime());
-        
+
         if (!IsOwner)
             return;
 
