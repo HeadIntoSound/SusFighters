@@ -117,20 +117,24 @@ public class PlayerController : NetworkBehaviour
     }
 
     // Used to not run any of this on remote players
-    public override void OnStartClient()
-    {
-        base.OnStartClient();
-        if (!base.IsOwner)
-        {
-            this.enabled = false;
-        }
-    }
+    // public override void OnStartClient()
+    // {
+    //     base.OnStartClient();
+    //     if (!base.IsOwner)
+    //     {
+    //         this.enabled = false;
+    //     }
+    // }
 
     void Update()
     {
-        FaceTarget();
-        Jump();
-        Attack();
+        if (base.IsOwner)
+        {
+            FaceTarget();
+            Jump();
+            Attack();
+        }
+
     }
 
     // This was also taken from the documentation, adapted the jump count to allow double jump
@@ -190,34 +194,41 @@ public class PlayerController : NetworkBehaviour
     }
 
     // The server calls this function to calculate the knockback and hitstun of the player that got hit
-    [TargetRpc]
-    public void RpcReceiveHit(NetworkConnection conn)
+    [ObserversRpc]
+    public void RpcReceiveHit()
     {
+        anim.Play(AnimationNames.TAKEDMG);
         hitstun = true;
+        StartCoroutine(HitstunTime());
+        
+        if (!IsOwner)
+            return;
+
         rb.velocity = Vector3.zero;
         float horizontal = (transform.position - target.transform.position).normalized.x;
         Vector3 force = new Vector3(horizontal, .75f, 0f) * (stats.knockback + health * Constants.KNOCKBACKMODIFIER);
         rb.AddForce(force, ForceMode.Impulse);
-        StartCoroutine(HitstunTime());
     }
 
     // Calculates the amount of time the player is going to be unable to input movement
     IEnumerator HitstunTime()
     {
+        skinController.HitstunIndicator(true);
         float hitstun = health * Constants.HITSTUNMODIFIER;
         yield return new WaitForSeconds(hitstun);
         this.hitstun = false;
+        skinController.HitstunIndicator(false);
     }
 
     // Produces the attack, telling the hitbox to activate and check if triggered
     void Attack()
     {
         timeSinceLastAttack += Time.deltaTime;
-        if (timeSinceLastAttack < stats.attackDuration + stats.attackCooldown)
+        if (timeSinceLastAttack < stats.attackDuration + stats.attackCooldown || hitstun)
             return;
         if (Input.GetButtonDown("Fire1"))
         {
-            anim.Play("Attack");
+            anim.Play(AnimationNames.ATTACK);
             hitboxController.Attack(stats.attackDuration, () => { RpcTriggerHit(target); });
             timeSinceLastAttack = 0;
         }
@@ -228,11 +239,13 @@ public class PlayerController : NetworkBehaviour
     void RpcTriggerHit(PlayerController toHit)
     {
         toHit.health += Constants.DMGMODIFIER;
-        toHit.RpcReceiveHit(toHit.Owner);
+        toHit.RpcReceiveHit();
     }
 
     private void OnTriggerEnter(Collider other)
     {
+        if (!IsOwner)
+            return;
         // Checks if the player is hugging the ledge, allows them to jump higher to recover
         if (other.CompareTag(Tags.LEDGE))
         {
@@ -247,6 +260,8 @@ public class PlayerController : NetworkBehaviour
 
     private void OnTriggerExit(Collider other)
     {
+        if (!IsOwner)
+            return;
         // Resets the jump speed previously raised
         if (other.transform.CompareTag(Tags.LEDGE))
         {

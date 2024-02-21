@@ -15,7 +15,7 @@ public class RespawnController : NetworkBehaviour
     // Respawns the player that hit the blast zone, awards points to the other
     void OnBlastZoneCollision(Transform player)
     {
-        foreach (var p in ServerController.Instance.players)
+        foreach (var p in ServerController.Instance.players.Values)
         {
             if (p.transform == player)
             {
