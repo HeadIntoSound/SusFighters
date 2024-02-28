@@ -112,12 +112,12 @@ namespace FishNet.Object
         /// True if the local client is the owner of this object.
         /// This will only return true if IsClientInitialized is also true. You may check ownership status regardless of client initialized state by using Owner.IsLocalClient.
         /// </summary>
-#if UNITY_2020_3_OR_NEWER && UNITY_EDITOR_WIN
-        [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "OnStartServer", "")]
-        [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "OnStartNetwork", " Use base.Owner.IsLocalClient instead.")]
-        [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "Awake", "")]
-        [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "Start", "")]
-#endif
+// #if UNITY_2020_3_OR_NEWER && UNITY_EDITOR_WIN
+//         [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "OnStartServer", "")]
+//         [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "OnStartNetwork", " Use base.Owner.IsLocalClient instead.")]
+//         [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "Awake", "")]
+//         [PreventUsageInside("global::FishNet.Object.NetworkBehaviour", "Start", "")]
+// #endif
         public bool IsOwner => _networkObjectCache.IsOwner;
         /// <summary>
         /// Owner of this object.
