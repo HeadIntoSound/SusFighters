@@ -1,6 +1,6 @@
 # English
 ## Introduction
-This document describes the design and architecture of the game created as a solution to Eggscape’s technical test.
+This document describes the design and architecture of the game created as a solution to a technical test.
   
 Made using Unity as the engine and Fish-Net as the networking solution, the game is a simple side-scrolling fighter where two players have to throw off the stage the other and see who scores more points. In order to do so, each player can move and jump around and throw punches forward. Taking inspiration from other fighting games, the characters face each other automatically at all times, giving a more frenetic experience to the players.
 
@@ -63,7 +63,7 @@ In conclusion, I’m satisfied with the final state of the project for the scope
 
 # Español
 ## Introduction
-Este documento describe el diseño y la arquitectura del juego creado como solución a la prueba técnica de Eggscape.
+Este documento describe el diseño y la arquitectura del juego creado como solución a una prueba técnica.
 
 Se utilizó Unity como motor gráfico y Fish-Net como solución para el networking. El proyecto es un juego de pelea en scroll lateral en el que los jugadores deben lanzar del escenario a su rival y ver quién consigue más puntos. Para lograr esto, cada jugador puede moverse, saltar y lanzar golpes. Tomando inspiración en otros juegos de pelea, los personajes se dan la cara en todo momento de manera automática, permitiendo una experiencia de juego más frenética.
 
